@@ -17,6 +17,10 @@ class Options
         exit 0
       end
 
+      params.on("-m N", "--month N", Integer, "show time spent at month with number N") do |month|
+        options[:month] = month
+      end
+
       params.on("-r", "--report", "show time spent during this day, week and month") do
         options[:report] = true
       end
@@ -31,13 +35,15 @@ class Options
 end
 
 class TimeSheet
-  attr_accessor :trunk_to
+  attr_accessor :trunk_to, :month
 
   def initialize(ts_file)
     @ts_file = ts_file
+    @calendar_file = "./calendar"
     @trunk_to = 1000
     t = Time.now
     _, _, _, @day, @month, @year, @wday = t.to_a
+    @month if month
   end
 
   # Create report of time spent at this day, week and month
@@ -50,6 +56,13 @@ class TimeSheet
 
   private
 
+  # Read working hours calendar
+  #
+  def calendar_read
+    calendar = IO.read(@calendar_file)
+
+  end
+
   # Read timesheet and convert it to array of hashes
   #
   def read
@@ -61,6 +74,7 @@ class TimeSheet
       end
       ts_hash = Hash.new
       ts_hash[:date], ts_hash[:stime], ts_hash[:etime], ts_hash[:queue], ts_hash[:rt], ts_hash[:desc] = line.split(",")
+      next (ts_table) if ts_hash[:date].empty? || ts_hash[:stime].empty? || ts_hash[:etime].empty? || ts_hash[:queue].empty? || ts_hash[:rt].empty?
       ts_hash[:desc] = ts_hash[:desc].delete("\"")
       ts_hash[:year], ts_hash[:month], ts_hash[:day] = ts_hash[:date].split("-")
       ts_hash[:year], ts_hash[:month], ts_hash[:day] = ts_hash[:year].to_i, ts_hash[:month].to_i, ts_hash[:day].to_i
@@ -78,6 +92,7 @@ class TimeSheet
   # Calculate minutes loged today
   #
   def day_spent
+    return nil if (!@year && !@month && !@day)
     @list.inject(0) do |t_spent, line|
       if line[:year] == @year && line[:month] == @month && line[:day] == @day
         minutes = to_m(line[:etime]) - to_m(line[:stime])
@@ -91,6 +106,7 @@ class TimeSheet
   # Calculate minutes loged this week
   #
   def week_spent
+    return nil if (!@year && !@month && !@day && !@wday)
     @list.inject(0) do |t_spent, line|
       if line[:year] == @year && line[:month] == @month && line[:day] > (@day - @wday)
         minutes = to_m(line[:etime]) - to_m(line[:stime])
@@ -104,6 +120,7 @@ class TimeSheet
   # Calculate minutes loged this week
   #
   def month_spent
+    return nil if (!@year && !@month)
     @list.inject(0) do |t_spent, line|
       if line[:year] == @year && line[:month] == @month
         minutes = to_m(line[:etime]) - to_m(line[:stime])
@@ -130,7 +147,9 @@ options = opt.parse
 ts = TimeSheet.new(ARGV[-1])
 
 ts.trunk_to = options[:trunk_to] if options[:trunk_to]
+ts.month = options[:month] if options[:month]
 
 if options[:report]
-  ts.report.each {|time| puts time / 60 }
+#  ts.report.each {|time| puts time / 60 }
+  puts ts.report.map!{|time| time / 60}.join(', ')
 end
