@@ -54,13 +54,23 @@ class TimeSheet
     return day_spent, week_spent, month_spent
   end
 
+  # Show number fo workday at month (default is current month)
+  #
+  def workdays_month(month=@month)
+    read_calendar[month]
+  end
+
   private
 
   # Read working hours calendar
   #
-  def calendar_read
-    calendar = IO.read(@calendar_file)
-
+  def read_calendar
+    calendar = Hash.new
+    IO.read(@calendar_file).each_line do |line|
+      month, work_days = line.split(':')
+      calendar[month.to_i] = work_days.to_i
+    end
+    calendar
   end
 
   # Read timesheet and convert it to array of hashes
@@ -151,5 +161,5 @@ ts.month = options[:month] if options[:month]
 
 if options[:report]
 #  ts.report.each {|time| puts time / 60 }
-  puts ts.report.map!{|time| time / 60}.join(', ')
+  puts "#{ts.report.map!{|time| time / 60}.join(', ')} (#{ts.workdays_month})"
 end
