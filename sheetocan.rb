@@ -149,6 +149,7 @@ class TimeSheet
   end
 end
 ###############################################################################
+Dir.chdir(File.dirname(__FILE__))
 
 opt = Options.new
 options = opt.parse
