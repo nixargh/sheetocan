@@ -25,8 +25,8 @@ class Options
         options[:report] = true
       end
 
-      params.on("-t", "--truncate", "truncate timesheet to last number of lines") do
-        options[:trunk_to] = true
+      params.on("-t N", "--truncate N", Integer, "truncate timesheet to last number of lines") do |l_num|
+        options[:trunk_to] = l_num
       end
     end.parse!
 
@@ -96,7 +96,8 @@ class TimeSheet
   # Truncating list of timesheet lines to speed up calculating
   #
   def truncate(l_num)
-    @list = @list[0..l_num - 1] if @list.length > l_num
+    length = @list.length
+    @list = @list[0..l_num - 1] if length > l_num
   end
 
   # Calculate minutes loged today
@@ -127,7 +128,7 @@ class TimeSheet
     end     
   end
   
-  # Calculate minutes loged this week
+  # Calculate minutes loged this month
   #
   def month_spent
     return nil if (!@year && !@month)
