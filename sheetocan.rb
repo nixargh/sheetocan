@@ -1,4 +1,4 @@
-#!/usr/bin/ruby1.9.3
+#!/usr/bin/ruby
 ###############################################################################
 class Options
   require 'optparse'
@@ -163,5 +163,5 @@ ts.month = options[:month] if options[:month]
 
 if options[:report]
 #  ts.report.each {|time| puts time / 60 }
-  puts "#{ts.report.map!{|time| time / 60}.join(', ')} (#{ts.workdays_month})"
+  puts "#{ts.report.map!{|time| (time / 60.0).round(2)}.join(', ')} (#{ts.workdays_month})"
 end
