@@ -152,6 +152,7 @@ end
 ###############################################################################
 Dir.chdir(File.dirname(__FILE__))
 
+# Check ruby version
 if RUBY_VERSION.delete('.').to_i < 190
   puts("#{RUBY_VERSION} is unsupported. Please use ruby 1.9.0 or newer.")
   exit 1
@@ -167,6 +168,7 @@ ts.trunk_to = options[:trunk_to] if options[:trunk_to]
 ts.month = options[:month] if options[:month]
 
 if options[:report]
-#  ts.report.each {|time| puts time / 60 }
-  puts "#{ts.report.map!{|time| (time / 60.0).round(2)}.join(', ')} (#{ts.workdays_month})"
+  day_spent, week_spent, month_spent = ts.report
+  days_to_work = ts.workdays_month
+  puts "#{[day_spent, week_spent, month_spent].map!{|time| (time / 60.0).round(2)}.join(', ')} (#{days_to_work}, #{(month_spent / 60) - days_to_work})"
 end
