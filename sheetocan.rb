@@ -1,7 +1,28 @@
 #!/usr/bin/ruby
 ###############################################################################
+#### INFO ######################################################################
+# Sheetocan - tool for timesheet operations.
+# (*w) author: nixargh <nixargh@gmail.com>
+VERSION = '1.0.0'
+#### LICENSE ###################################################################
+#Copyright (C) 2014  nixargh <nixargh@gmail.com>
+#
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+#
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+#
+#You should have received a copy of the GNU General Public License
+#along with this program.  If not, see http://www.gnu.org/licenses/gpl.html.
+#### REQUIRE ###################################################################
+require 'optparse'
+#### CLASES ####################################################################
 class Options
-  require 'optparse'
 
   # Parse command line arguments
   #
@@ -9,7 +30,7 @@ class Options
     options = Hash.new(false)
 
     OptionParser.new do |params|
-      params.banner = "Usage: #{__FILE__} [options]"
+      params.banner = "Sheetocan v.#{VERSION}.\nUsage: #{__FILE__} [options]"
       
       params.on("-h", "--help", "show this message") do
         options[:help] = true
@@ -54,9 +75,9 @@ class TimeSheet
     return day_spent, week_spent, month_spent
   end
 
-  # Show number fo workday at month (default is current month)
+  # Show number of workhours at month (default is current month)
   #
-  def workdays_month(month=@month)
+  def workhours_month(month=@month)
     read_calendar[month]
   end
 
@@ -149,7 +170,7 @@ class TimeSheet
     h.to_i * 60 + m.to_i
   end
 end
-###############################################################################
+#### BEGIN ####################################################################
 Dir.chdir(File.dirname(__FILE__))
 
 # Check ruby version
@@ -169,6 +190,8 @@ ts.month = options[:month] if options[:month]
 
 if options[:report]
   day_spent, week_spent, month_spent = ts.report
-  days_to_work = ts.workdays_month
-  puts "#{[day_spent, week_spent, month_spent].map!{|time| (time / 60.0).round(2)}.join(', ')} (#{days_to_work}, #{(month_spent / 60) - days_to_work})"
+  hours_to_work = ts.workhours_month
+  puts "#{[day_spent, week_spent, month_spent].map!{|time| (time / 60.0).round(2)}.join(', ')} (#{hours_to_work}, #{(month_spent / 60) - hours_to_work})"
 end
+
+exit 0
