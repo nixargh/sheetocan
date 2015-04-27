@@ -152,6 +152,11 @@ end
 ###############################################################################
 Dir.chdir(File.dirname(__FILE__))
 
+if RUBY_VERSION.delete('.').to_i < 190
+  puts("#{RUBY_VERSION} is unsupported. Please use ruby 1.9.0 or newer.")
+  exit 1
+end
+
 opt = Options.new
 options = opt.parse
 
