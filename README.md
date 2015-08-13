@@ -3,5 +3,5 @@ sheetocan
 
 timesheet operations
 
-Usage exaple:
+Usage example:
 ruby1.9.3 ~/sheetocan/sheetocan.rb -r ~/timesheet/myname
