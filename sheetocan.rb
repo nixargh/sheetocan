@@ -3,7 +3,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '1.0.0'
+VERSION = '1.1.0'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -72,6 +72,7 @@ class TimeSheet
   def report
     read
     truncate(@trunk_to)
+    exit(1) if !validate
     return day_spent, week_spent, month_spent
   end
 
@@ -99,13 +100,21 @@ class TimeSheet
   def read
     ts = IO.read(@ts_file)
     ts = ts.split("\n")
+    line_number = 0
     @list = ts.inject([]) do |ts_table, line|
+      line_number = line_number + 1
+      # Skip empty lines and comments
       if line.empty? || line.index("Revision") || line.index("#") == 0
         next(ts_table)
       end
+
       ts_hash = Hash.new
+      ts_hash[:number] = line_number
       ts_hash[:date], ts_hash[:stime], ts_hash[:etime], ts_hash[:queue], ts_hash[:rt], ts_hash[:desc] = line.split(",")
+      
+      # Go to next line if something except description is empty
       next (ts_table) if ts_hash[:date].empty? || ts_hash[:stime].empty? || ts_hash[:etime].empty? || ts_hash[:queue].empty? || ts_hash[:rt].empty?
+      
       ts_hash[:desc] = ts_hash[:desc].delete("\"")
       ts_hash[:year], ts_hash[:month], ts_hash[:day] = ts_hash[:date].split("-")
       ts_hash[:year], ts_hash[:month], ts_hash[:day] = ts_hash[:year].to_i, ts_hash[:month].to_i, ts_hash[:day].to_i
@@ -119,6 +128,37 @@ class TimeSheet
   def truncate(l_num)
     length = @list.length
     @list = @list[0..l_num - 1] if length > l_num
+  end
+
+  # Do some validations of lines data
+  #
+  def validate
+    list = @list
+    bad_lines = Array.new
+    list.reverse!.each_index do |i|
+      cur_line = @list[i]
+      # Record lines where end time more or equal to start time
+      bad_lines.push([cur_line[:number], "Start time >= than end time"]) if to_m(cur_line[:etime]) <= to_m(cur_line[:stime])
+
+      if i > 0
+        pre_line = @list[i - 1]
+        # Record lines where start time more or equal to end time of previous line
+        if cur_line[:day] == pre_line[:day] && cur_line[:month] == pre_line[:month] && cur_line[:year] == pre_line[:year]
+          bad_lines.push([cur_line[:number], "Start time < than end time of previous record"]) if to_m(cur_line[:stime]) < to_m(pre_line[:etime])
+        end
+      end
+    end
+
+    if !bad_lines.empty?
+      puts "Failed to validate timesheet with following errors:"
+      bad_lines.each do |error|
+        puts "\t#{error[0]}: #{error[1]}"
+      end
+
+      return false
+    end
+
+    return true
   end
 
   # Calculate minutes loged today
