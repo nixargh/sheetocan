@@ -72,7 +72,7 @@ class TimeSheet
   def report
     read
     truncate(@trunk_to)
-    exit(1) if !validate
+    exit 1 if !validate
     return day_spent, week_spent, month_spent
   end
 
@@ -143,8 +143,18 @@ class TimeSheet
       if i > 0
         pre_line = @list[i - 1]
         # Record lines where start time more or equal to end time of previous line
-        if cur_line[:day] == pre_line[:day] && cur_line[:month] == pre_line[:month] && cur_line[:year] == pre_line[:year]
-          bad_lines.push([cur_line[:number], "Start time < than end time of previous record"]) if to_m(cur_line[:stime]) < to_m(pre_line[:etime])
+        if cur_line[:year] < pre_line[:year]
+          bad_lines.push([cur_line[:number], "Year < than year of previous record"])
+        elsif cur_line[:year] == pre_line[:year]
+          if cur_line[:month] < pre_line[:month]
+            bad_lines.push([cur_line[:number], "Month < than month of previous record"])
+          elsif cur_line[:month] == pre_line[:month]
+            if cur_line[:day] < pre_line[:day]
+              bad_lines.push([cur_line[:number], "Day < than day of previous record"])
+            elsif cur_line[:day] == pre_line[:day]
+              bad_lines.push([cur_line[:number], "Start time < than end time of previous record"]) if to_m(cur_line[:stime]) < to_m(pre_line[:etime])
+            end
+          end
         end
       end
     end
