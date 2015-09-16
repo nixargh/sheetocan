@@ -3,7 +3,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '1.1.0'
+VERSION = '1.2.1'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -49,6 +49,10 @@ class Options
       params.on("-t N", "--truncate N", Integer, "truncate timesheet to last number of lines") do |l_num|
         options[:trunk_to] = l_num
       end
+
+      params.on("-b", "--bubbles", "show non-working time in current day between first and last time worked") do
+        options[:bubbles] = true
+      end
     end.parse!
 
     options
@@ -72,8 +76,25 @@ class TimeSheet
   def report
     read
     truncate(@trunk_to)
-    exit 1 if !validate
+    exit 1 if !validate_list
     return day_spent, week_spent, month_spent
+  end
+
+  # Only validate timesheet
+  #
+  def validate
+    read
+    truncate(@trunk_to)
+    exit 1 if !validate_list
+  end
+
+  # Return bubbles minutes
+  #
+  def bubbles
+    if @list.empty?
+      raise "No timesheet content found."
+    end
+    calculate_bubbles
   end
 
   # Show number of workhours at month (default is current month)
@@ -111,6 +132,9 @@ class TimeSheet
       ts_hash = Hash.new
       ts_hash[:number] = line_number
       ts_hash[:date], ts_hash[:stime], ts_hash[:etime], ts_hash[:queue], ts_hash[:rt], ts_hash[:desc] = line.split(",")
+
+      # End time 00:00 is also valid and should be equal to 24:00
+      ts_hash[:etime] = "24:00" if ts_hash[:etime] == "00:00"
       
       # Go to next line if something except description is empty
       next (ts_table) if ts_hash[:date].empty? || ts_hash[:stime].empty? || ts_hash[:etime].empty? || ts_hash[:queue].empty? || ts_hash[:rt].empty?
@@ -132,16 +156,16 @@ class TimeSheet
 
   # Do some validations of lines data
   #
-  def validate
-    list = @list
+  def validate_list
+    list = @list.reverse
     bad_lines = Array.new
-    list.reverse!.each_index do |i|
-      cur_line = @list[i]
+    list.each_index do |i|
+      cur_line = list[i]
       # Record lines where end time more or equal to start time
       bad_lines.push([cur_line[:number], "Start time >= than end time"]) if to_m(cur_line[:etime]) <= to_m(cur_line[:stime])
 
       if i > 0
-        pre_line = @list[i - 1]
+        pre_line = list[i - 1]
         # Record lines where start time more or equal to end time of previous line
         if cur_line[:year] < pre_line[:year]
           bad_lines.push([cur_line[:number], "Year < than year of previous record"])
@@ -169,6 +193,32 @@ class TimeSheet
     end
 
     return true
+  end
+
+  # Calculate free minutes between busy periods during day
+  #
+  def calculate_bubbles
+    return nil if (!@year && !@month && !@day)
+
+    list = @list.reverse
+    free_min = 0
+
+    list.reverse.each_index do |i|
+      cur_line = list[i]
+
+      if i > 0
+        pre_line = list[i - 1]
+        if cur_line[:year] == @year && cur_line[:month] == @month && cur_line[:day] == @day &&
+          pre_line[:year] == @year && pre_line[:month] == @month && pre_line[:day] == @day
+
+          minutes = to_m(cur_line[:stime]) - to_m(pre_line[:etime])
+
+          free_min = free_min + minutes
+        end
+      end
+    end     
+
+    free_min
   end
 
   # Calculate minutes loged today
@@ -241,7 +291,11 @@ ts.month = options[:month] if options[:month]
 if options[:report]
   day_spent, week_spent, month_spent = ts.report
   hours_to_work = ts.workhours_month
-  puts "#{[day_spent, week_spent, month_spent].map!{|time| (time / 60.0).round(2)}.join(', ')} (#{hours_to_work}, #{(month_spent / 60) - hours_to_work})"
+  bubbles = options[:bubbles] ? " [#{(ts.bubbles / 60.0).round(2)}]" : nil
+  puts "#{[day_spent, week_spent, month_spent].map!{|time| (time / 60.0).round(2)}.join(', ')} (#{hours_to_work}, #{(month_spent / 60) - hours_to_work})#{bubbles}"
+else
+  ts.validate
+  puts "No errors found."
 end
 
 exit 0
