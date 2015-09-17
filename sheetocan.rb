@@ -50,8 +50,12 @@ class Options
         options[:trunk_to] = l_num
       end
 
-      params.on("-b", "--bubbles", "show non-working time in current day between first and last time worked") do
-        options[:bubbles] = true
+      params.on("-b F", "--bubbles F", Float, "show non-working time in current day between first and last time worked") do |bubble_limit|
+        if bubble_limit
+          options[:bubbles] = bubble_limit
+        else
+          options[:bubbles] = 24.0
+        end
       end
     end.parse!
 
@@ -90,11 +94,11 @@ class TimeSheet
 
   # Return bubbles minutes
   #
-  def bubbles
+  def bubbles(limit)
     if @list.empty?
       raise "No timesheet content found."
     end
-    calculate_bubbles
+    calculate_bubbles(limit)
   end
 
   # Show number of workhours at month (default is current month)
@@ -197,7 +201,7 @@ class TimeSheet
 
   # Calculate free minutes between busy periods during day
   #
-  def calculate_bubbles
+  def calculate_bubbles(limit)
     return nil if (!@year && !@month && !@day)
 
     list = @list.reverse
@@ -213,7 +217,9 @@ class TimeSheet
 
           minutes = to_m(cur_line[:stime]) - to_m(pre_line[:etime])
 
-          free_min = free_min + minutes
+          if minutes < limit
+            free_min = free_min + minutes
+          end
         end
       end
     end     
@@ -291,7 +297,7 @@ ts.month = options[:month] if options[:month]
 if options[:report]
   day_spent, week_spent, month_spent = ts.report
   hours_to_work = ts.workhours_month
-  bubbles = options[:bubbles] ? " [#{(ts.bubbles / 60.0).round(2)}]" : nil
+  bubbles = options[:bubbles] ? " [#{(ts.bubbles(options[:bubbles] * 60) / 60.0).round(2)}]" : nil
   puts "#{[day_spent, week_spent, month_spent].map!{|time| (time / 60.0).round(2)}.join(', ')} (#{hours_to_work}, #{(month_spent / 60) - hours_to_work})#{bubbles}"
 else
   ts.validate
