@@ -32,13 +32,13 @@ class Options
     OptionParser.new do |params|
       params.banner = "Sheetocan v.#{VERSION}.\nUsage: #{__FILE__} [options]"
       
-      params.on("-h", "--help", "show this message") do
+      params.on_tail("-h", "--help", "show this message") do
         options[:help] = true
         puts params
         exit 0
       end
 
-      params.on("-m N", "--month N", Integer, "show time spent at month with number N") do |month|
+      params.on("-m", "--month N", Integer, "show time spent at month with number N") do |month|
         options[:month] = month
       end
 
@@ -46,16 +46,12 @@ class Options
         options[:report] = true
       end
 
-      params.on("-t N", "--truncate N", Integer, "truncate timesheet to last number of lines") do |l_num|
+      params.on("-t", "--truncate N", Integer, "truncate timesheet to last number of lines") do |l_num|
         options[:trunk_to] = l_num
       end
 
-      params.on("-b F", "--bubbles F", Float, "show non-working time in current day between first and last time worked") do |bubble_limit|
-        if bubble_limit
-          options[:bubbles] = bubble_limit
-        else
-          options[:bubbles] = 24.0
-        end
+      params.on("-b", "--bubbles F", Float, "show non-working time in current day between first and last time worked", "count only intervals < F") do |bubble_limit|
+        options[:bubbles] = bubble_limit
       end
     end.parse!
 
