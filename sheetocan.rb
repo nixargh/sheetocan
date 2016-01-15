@@ -32,13 +32,13 @@ class Options
     OptionParser.new do |params|
       params.banner = "Sheetocan v.#{VERSION}.\nUsage: #{__FILE__} [options]"
       
-      params.on("-h", "--help", "show this message") do
+      params.on_tail("-h", "--help", "show this message") do
         options[:help] = true
         puts params
         exit 0
       end
 
-      params.on("-m N", "--month N", Integer, "show time spent at month with number N") do |month|
+      params.on("-m", "--month N", Integer, "show time spent at month with number N") do |month|
         options[:month] = month
       end
 
@@ -46,16 +46,12 @@ class Options
         options[:report] = true
       end
 
-      params.on("-t N", "--truncate N", Integer, "truncate timesheet to last number of lines") do |l_num|
+      params.on("-t", "--truncate N", Integer, "truncate timesheet to last number of lines") do |l_num|
         options[:trunk_to] = l_num
       end
 
-      params.on("-b F", "--bubbles F", Float, "show non-working time in current day between first and last time worked") do |bubble_limit|
-        if bubble_limit
-          options[:bubbles] = bubble_limit
-        else
-          options[:bubbles] = 24.0
-        end
+      params.on("-b", "--bubbles F", Float, "show non-working time in current day between first and last time worked", "count only intervals < F") do |bubble_limit|
+        options[:bubbles] = bubble_limit
       end
     end.parse!
 
@@ -142,7 +138,10 @@ class TimeSheet
     ts = IO.read(@ts_file)
     ts = ts.split("\n")
     line_number = 0
+    bad_lines = Array.new
+
     @list = ts.inject([]) do |ts_table, line|
+      skip_line = false
       line_number = line_number + 1
       # Skip empty lines and comments
       if line.empty? || line.index("Revision") || line.index("#") == 0
@@ -152,6 +151,16 @@ class TimeSheet
       ts_hash = Hash.new
       ts_hash[:number] = line_number
       ts_hash[:date], ts_hash[:stime], ts_hash[:etime], ts_hash[:queue], ts_hash[:rt], ts_hash[:desc] = line.split(",")
+
+      # Detect lines with bad syntax and make a list
+      ts_hash.each_value do |value| 
+        if ! value
+          bad_lines.push("Bad syntax at line #{line_number}:\n\t#{line}") 
+          skip_line = true
+          break
+        end
+      end
+      next(ts_table) if skip_line
 
       # End time 00:00 is also valid and should be equal to 24:00
       ts_hash[:etime] = "24:00" if ts_hash[:etime] == "00:00"
@@ -164,6 +173,13 @@ class TimeSheet
       ts_hash[:year], ts_hash[:month], ts_hash[:day] = ts_hash[:year].to_i, ts_hash[:month].to_i, ts_hash[:day].to_i
       ts_table << ts_hash
     end
+
+    # Stop processing if lines with bad syntax found
+    if ! bad_lines.empty?
+      puts bad_lines
+      exit 1
+    end
+
     @list.reverse!
   end
 
