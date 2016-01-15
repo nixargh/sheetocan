@@ -3,7 +3,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '1.2.1'
+VERSION = '1.3.1'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -68,7 +68,7 @@ class TimeSheet
 
   def initialize(ts_file)
     @ts_file = ts_file
-    @calendar_file = "./calendar"
+    @calendar_file = ['calendar', '/usr/share/sheetocan/calendar']
     @trunk_to = 1000
     t = Time.now
     _, _, _, @day, @month, @year, @wday = t.to_a
@@ -104,7 +104,8 @@ class TimeSheet
   # Show number of workhours at month (default is current month)
   #
   def workhours_month(month=@month)
-    read_calendar[month]
+    calendar = read_calendar
+    calendar ? calendar[month] : nil
   end
 
   private
@@ -112,12 +113,27 @@ class TimeSheet
   # Read working hours calendar
   #
   def read_calendar
-    calendar = Hash.new
-    IO.read(@calendar_file).each_line do |line|
-      month, work_days = line.split(':')
-      calendar[month.to_i] = work_days.to_i
+    calendar_file = find_calendar
+    if calendar_file
+      calendar = Hash.new
+      IO.read(calendar_file).each_line do |line|
+        month, work_days = line.split(':')
+        calendar[month.to_i] = work_days.to_i
+      end
+      calendar
+    else
+      nil
     end
-    calendar
+  end
+
+  #
+  #
+  def find_calendar
+    @calendar_file.each do |file|
+      return file if File.exist?(file)
+    end
+    puts "WARNING: Calendar file not found at: #{@calendar_file}."
+    nil
   end
 
   # Read timesheet and convert it to array of hashes
@@ -277,7 +293,9 @@ class TimeSheet
   end
 end
 #### BEGIN ####################################################################
-Dir.chdir(File.dirname(__FILE__))
+
+# Change directory to one where script file lives
+Dir.chdir(File.dirname(File.readlink(__FILE__)))
 
 # Check ruby version
 if RUBY_VERSION.delete('.').to_i < 190
@@ -296,9 +314,16 @@ ts.month = options[:month] if options[:month]
 
 if options[:report]
   day_spent, week_spent, month_spent = ts.report
-  hours_to_work = ts.workhours_month
+
+  if (hours_to_work = ts.workhours_month)
+    work_hours_info = "#{hours_to_work}, #{(month_spent / 60) - hours_to_work}"
+  else
+    work_hours_info = ''
+  end
+
   bubbles = options[:bubbles] ? " [#{(ts.bubbles(options[:bubbles] * 60) / 60.0).round(2)}]" : nil
-  puts "#{[day_spent, week_spent, month_spent].map!{|time| (time / 60.0).round(2)}.join(', ')} (#{hours_to_work}, #{(month_spent / 60) - hours_to_work})#{bubbles}"
+
+  puts "#{[day_spent, week_spent, month_spent].map!{|time| (time / 60.0).round(2)}.join(', ')} (#{work_hours_info})#{bubbles}"
 else
   ts.validate
   puts "No errors found."
