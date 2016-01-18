@@ -3,7 +3,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '1.3.1'
+VERSION = '1.3.2'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -311,7 +311,8 @@ end
 #### BEGIN ####################################################################
 
 # Change directory to one where script file lives
-Dir.chdir(File.dirname(File.readlink(__FILE__)))
+script_file = File.symlink?(__FILE__) ? File.readlink(__FILE__) : __FILE__
+Dir.chdir(File.dirname(script_file))
 
 # Check ruby version
 if RUBY_VERSION.delete('.').to_i < 190
