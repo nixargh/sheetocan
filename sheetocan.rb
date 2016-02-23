@@ -3,7 +3,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '1.3.3'
+VERSION = '1.4.0'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -143,6 +143,7 @@ class TimeSheet
     @list = ts.inject([]) do |ts_table, line|
       skip_line = false
       line_number = line_number + 1
+
       # Skip empty lines and comments
       if line.empty? || line.index("Revision") || line.index("#") == 0
         next(ts_table)
@@ -152,7 +153,7 @@ class TimeSheet
       ts_hash[:number] = line_number
       ts_hash[:date], ts_hash[:stime], ts_hash[:etime], ts_hash[:queue], ts_hash[:rt], ts_hash[:desc] = line.split(",")
 
-      # Detect lines with bad syntax and make a list
+      # Detect lines with bad separator and make a list
       ts_hash.each_value do |value| 
         if ! value
           bad_lines.push("Bad syntax at line #{line_number}:\n\t#{line}") 
@@ -195,14 +196,39 @@ class TimeSheet
   def validate_list
     list = @list.reverse
     bad_lines = Array.new
+
     list.each_index do |i|
       cur_line = list[i]
+
+      # Check all parts of date
+      year = cur_line[:year]
+      year_now = Time.now.year
+      bad_lines.push([cur_line[:number], "Bad year: #{year}"]) if year > year_now
+
+      month = cur_line[:month]
+      month_now = Time.now.month
+      bad_lines.push([cur_line[:number], "Bad month: #{month}"]) if month < 1 || month > 12
+
+      day = cur_line[:day]
+      day_now = Time.now.day
+      bad_lines.push([cur_line[:number], "Bad day: #{day}"]) if day < 1 || day > 31
+
+      stime = cur_line[:stime]
+      bad_lines.push([cur_line[:number], "Bad start time: #{stime}"]) if stime !~ /^([01]\d|2[0-4]):[0-5]\d$/
+
+      etime = cur_line[:etime]
+      bad_lines.push([cur_line[:number], "Bad end time: #{etime}"]) if etime !~ /^([01]\d|2[0-4]):[0-5]\d$/
+
+      # Check ticket name format
+      rt = cur_line[:rt]
+      bad_lines.push([cur_line[:number], "Bad ticket number: #{rt}"]) if rt !~ /^RT\:\d{6}$/
+
       # Record lines where end time more or equal to start time
       bad_lines.push([cur_line[:number], "Start time >= than end time"]) if to_m(cur_line[:etime]) <= to_m(cur_line[:stime])
 
+      # Record lines where start time more or equal to end time of previous line
       if i > 0
         pre_line = list[i - 1]
-        # Record lines where start time more or equal to end time of previous line
         if cur_line[:year] < pre_line[:year]
           bad_lines.push([cur_line[:number], "Year < than year of previous record"])
         elsif cur_line[:year] == pre_line[:year]
@@ -217,6 +243,7 @@ class TimeSheet
           end
         end
       end
+
     end
 
     if !bad_lines.empty?
