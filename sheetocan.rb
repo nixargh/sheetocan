@@ -3,7 +3,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '1.4.0'
+VERSION = '1.4.1'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -221,7 +221,7 @@ class TimeSheet
 
       # Check ticket name format
       rt = cur_line[:rt]
-      bad_lines.push([cur_line[:number], "Bad ticket number: #{rt}"]) if rt !~ /^RT\:\d{6}$/
+      bad_lines.push([cur_line[:number], "Bad ticket number: #{rt}"]) if rt !~ /^RT\:\d+$/
 
       # Record lines where end time more or equal to start time
       bad_lines.push([cur_line[:number], "Start time >= than end time"]) if to_m(cur_line[:etime]) <= to_m(cur_line[:stime])
