@@ -3,7 +3,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '1.4.1'
+VERSION = '1.5.0'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -52,6 +52,10 @@ class Options
 
       params.on("-b", "--bubbles F", Float, "show non-working time in current day between first and last time worked", "count only intervals < F") do |bubble_limit|
         options[:bubbles] = bubble_limit
+      end
+
+      params.on("-w", "--wmaker", "display output in five lines for Window Maker dock app") do
+        options[:wmaker] = true
       end
     end.parse!
 
@@ -367,7 +371,13 @@ if options[:report]
 
   bubbles = options[:bubbles] ? " [#{(ts.bubbles(options[:bubbles] * 60) / 60.0).round(2)}]" : nil
 
-  puts "#{[day_spent, week_spent, month_spent].map!{|time| (time / 60.0).round(2)}.join(', ')} (#{work_hours_info})#{bubbles}"
+  if ! options[:wmaker]
+    puts "#{[day_spent, week_spent, month_spent].map!{|time| (time / 60.0).round(2)}.join(', ')} (#{work_hours_info})#{bubbles}"
+  else
+    puts [day_spent, week_spent, month_spent].map!{|time| (time / 60.0).round(2)}.join("\n") 
+    puts work_hours_info
+    puts bubbles.delete(" ")
+  end
 else
   ts.validate
   puts "No errors found."
