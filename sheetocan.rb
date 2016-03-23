@@ -3,7 +3,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '1.5.0'
+VERSION = '1.5.1'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -68,7 +68,7 @@ class TimeSheet
 
   def initialize(ts_file)
     @ts_file = ts_file
-    @calendar_file = ["#{SCRIPT_DIR}/calendar", '/usr/share/sheetocan/calendar']
+    @calendar_file = ['/usr/share/sheetocan/calendar', "#{SCRIPT_DIR}/calendar"]
     @trunk_to = 1000
     t = Time.now
     _, _, _, @day, @month, @year, @wday = t.to_a
