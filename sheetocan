@@ -3,7 +3,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '1.5.1'
+VERSION = '2.0.0'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -46,7 +46,15 @@ class Options
         options[:report] = true
       end
 
-      params.on("-t", "--truncate N", Integer, "truncate timesheet to last number of lines") do |l_num|
+      params.on("-l", "--teamlead", "show detailed report") do
+        options[:teamlead] = true
+      end
+
+      params.on("-T", "--top N", Integer, "show only top N records at detailed (teamlead) report; 0 stands for no limit") do |tl_limit|
+        options[:teamlead_limit] = tl_limit
+      end
+
+      params.on("-t", "--truncate N", Integer, "do calculations with only last number of lines") do |l_num|
         options[:trunk_to] = l_num
       end
 
@@ -82,6 +90,15 @@ class TimeSheet
     truncate(@trunk_to)
     exit 1 if !validate_list
     return day_spent, week_spent, month_spent
+  end
+
+  # Create report with time spent on tickets and projects
+  #
+  def teamlead
+    read
+    truncate(@trunk_to)
+    exit 1 if !validate_list
+    return time_to_tickets, time_to_projects
   end
 
   # Only validate timesheet
@@ -126,7 +143,7 @@ class TimeSheet
     end
   end
 
-  #
+  # Find calendar file
   #
   def find_calendar
     @calendar_file.each do |file|
@@ -136,7 +153,7 @@ class TimeSheet
     nil
   end
 
-  # Read timesheet and convert it to array of hashes
+  # Read timesheet and convert it to an array of hashes
   #
   def read
     ts = IO.read(@ts_file)
@@ -176,6 +193,11 @@ class TimeSheet
       ts_hash[:desc] = ts_hash[:desc].delete("\"")
       ts_hash[:year], ts_hash[:month], ts_hash[:day] = ts_hash[:date].split("-")
       ts_hash[:year], ts_hash[:month], ts_hash[:day] = ts_hash[:year].to_i, ts_hash[:month].to_i, ts_hash[:day].to_i
+      
+      # Extract project from description
+      project = ts_hash[:desc].scan(/(^\S+):\s.+$/).first if ts_hash[:desc]
+      ts_hash[:project] = project.first if project
+
       ts_table << ts_hash
     end
 
@@ -332,6 +354,46 @@ class TimeSheet
     end     
   end
 
+  # Create sorted array with monthly tickets and time spent on them
+  #
+  def time_to_tickets
+    return nil if !@month
+
+    tickets = Hash.new
+
+    @list.each do |line|
+      if line[:month] == @month
+        ticket = line[:rt]
+        time = tickets[ticket] ? tickets[ticket] : 0
+        minutes = to_m(line[:etime]) - to_m(line[:stime])
+        tickets[ticket] = time + minutes
+      end
+    end
+
+    tickets.sort_by{|key, value| value }.reverse
+  end
+
+  # Create sorted array with monthly projects and time spent on them
+  #
+  def time_to_projects
+    return nil if !@month
+
+    projects = Hash.new
+
+    @list.each do |line| 
+      if line[:month] == @month
+        project = line[:project]
+        if project
+          time = projects[project] ? projects[project] : 0
+          minutes = to_m(line[:etime]) - to_m(line[:stime])
+          projects[project] = time + minutes
+        end
+      end
+    end
+
+    projects.sort_by{|key, value| value }.reverse
+  end
+
   # Convert time (HH:MM 24-h format) to number of minutes
   #
   def to_m(time)
@@ -351,16 +413,23 @@ if RUBY_VERSION.delete('.').to_i < 190
   exit 1
 end
 
+# Display help if no arguments given
+ARGV << '-h' if ARGV.empty?
 opt = Options.new
 options = opt.parse
 
-# take last unparsed argument as timesheet file
+# Take last unparsed argument as timesheet file
 ts = TimeSheet.new(ARGV[-1])
 
 ts.trunk_to = options[:trunk_to] if options[:trunk_to]
 ts.month = options[:month] if options[:month]
 
+reported = false
+
+# Display simple statistics
 if options[:report]
+  puts if reported
+
   day_spent, week_spent, month_spent = ts.report
 
   if (hours_to_work = ts.workhours_month)
@@ -376,9 +445,39 @@ if options[:report]
   else
     puts [day_spent, week_spent, month_spent].map!{|time| (time / 60.0).round(2)}.join("\n") 
     puts work_hours_info
-    puts bubbles.delete(" ")
+    puts bubbles.delete(" ") if bubbles
   end
-else
+
+  reported = true
+end
+
+# Display detailed statistics
+if options[:teamlead]
+  # Show only top records (10 by default)
+  limit = options[:teamlead_limit] || 10
+
+  puts if reported
+
+  tickets, projects = ts.teamlead
+
+  limit = (tickets.length - 1) if options[:teamlead_limit] == 0
+  puts "Hours spent on tickets (top #{limit}):"
+  tickets[0..limit].each do |ticket|
+    puts sprintf("%-15s %7.2f", ticket[0], (ticket[1]/60.0).round(2))
+  end
+
+
+  limit = (projects.length - 1) if options[:teamlead_limit] == 0
+  puts "\nHours spent on projects (top #{limit}):"
+  projects[0..limit].each do |project|
+    puts sprintf("%-15s %7.2f", project[0], (project[1]/60.0).round(2))
+  end
+
+  reported = true
+end
+
+# Only validate timesheet
+if ! reported
   ts.validate
   puts "No errors found."
 end
