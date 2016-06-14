@@ -46,8 +46,10 @@ class Options
         options[:report] = true
       end
 
-      params.on("-l", "--teamlead", "show detailed report") do
-        options[:teamlead] = true
+      params.on("-l", "--teamlead [p|q|t]", String, "show detailed report, time spent on [projects|queues|tickets]") do |items|
+        items_a = Array.new 
+        items.each_char { |i| items_a.push(i) }
+        options[:teamlead] = items_a
       end
 
       params.on("-T", "--top N", Integer, "show only top N records at detailed (teamlead) report; 0 stands for no limit") do |tl_limit|
@@ -98,7 +100,7 @@ class TimeSheet
     read
     truncate(@trunk_to)
     exit 1 if !validate_list
-    return time_to_tickets, time_to_projects
+    return time_to_tickets, time_to_queues, time_to_projects
   end
 
   # Only validate timesheet
@@ -357,41 +359,41 @@ class TimeSheet
   # Create sorted array with monthly tickets and time spent on them
   #
   def time_to_tickets
-    return nil if !@month
+    time_to('rt')
+  end
 
-    tickets = Hash.new
-
-    @list.each do |line|
-      if line[:month] == @month
-        ticket = line[:rt]
-        time = tickets[ticket] ? tickets[ticket] : 0
-        minutes = to_m(line[:etime]) - to_m(line[:stime])
-        tickets[ticket] = time + minutes
-      end
-    end
-
-    tickets.sort_by{|key, value| value }.reverse
+  # Create sorted array with monthly queues and time spent on them
+  #
+  def time_to_queues
+    time_to('queue')
   end
 
   # Create sorted array with monthly projects and time spent on them
   #
   def time_to_projects
+    time_to('project')
+  end
+
+  # Create sorted array with monthly items and time spent on them
+  #
+  def time_to(item)
     return nil if !@month
 
-    projects = Hash.new
+    item_symbol = item.to_sym
+    items = Hash.new
 
     @list.each do |line| 
       if line[:month] == @month
-        project = line[:project]
-        if project
-          time = projects[project] ? projects[project] : 0
+        item = line[item_symbol]
+        if item
+          time = items[item] ? items[item] : 0
           minutes = to_m(line[:etime]) - to_m(line[:stime])
-          projects[project] = time + minutes
+          items[item] = time + minutes
         end
       end
     end
 
-    projects.sort_by{|key, value| value }.reverse
+    items.sort_by{|key, value| value }.reverse
   end
 
   # Convert time (HH:MM 24-h format) to number of minutes
@@ -458,19 +460,38 @@ if options[:teamlead]
 
   puts if reported
 
-  tickets, projects = ts.teamlead
+  tickets, queues, projects = ts.teamlead
 
-  limit = (tickets.length - 1) if options[:teamlead_limit] == 0
-  puts "Hours spent on tickets (top #{limit}):"
-  tickets[0..limit].each do |ticket|
-    puts sprintf("%-15s %7.2f", ticket[0], (ticket[1]/60.0).round(2))
+  if options[:teamlead].include?('t')
+    limit = (tickets.length - 1) if options[:teamlead_limit] == 0
+    puts "Hours spent on tickets (top #{limit}):"
+    tickets[0..limit - 1].each do |ticket|
+      puts sprintf("%-15s %7.2f", ticket[0], (ticket[1]/60.0).round(2))
+    end
+    options[:teamlead].delete('t')
   end
 
-
-  limit = (projects.length - 1) if options[:teamlead_limit] == 0
-  puts "\nHours spent on projects (top #{limit}):"
-  projects[0..limit].each do |project|
-    puts sprintf("%-15s %7.2f", project[0], (project[1]/60.0).round(2))
+  if options[:teamlead].include?('q')
+    limit = (queues.length - 1) if options[:teamlead_limit] == 0
+    puts "\nHours spent on queues (top #{limit}):"
+    queues[0..limit - 1].each do |queue|
+      puts sprintf("%-15s %7.2f", queue[0], (queue[1]/60.0).round(2))
+    end
+    options[:teamlead].delete('q')
+  end
+  
+  if options[:teamlead].include?('p')
+    limit = (projects.length - 1) if options[:teamlead_limit] == 0
+    puts "\nHours spent on projects (top #{limit}):"
+    projects[0..limit - 1].each do |project|
+      puts sprintf("%-15s %7.2f", project[0], (project[1]/60.0).round(2))
+    end
+    options[:teamlead].delete('p')
+  end
+  
+  if options[:teamlead].length > 0
+    puts "\nUnknown value(s): #{options[:teamlead]}."
+    exit 1
   end
 
   reported = true
