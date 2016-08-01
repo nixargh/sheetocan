@@ -3,7 +3,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '2.0.0'
+VERSION = '2.0.1'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -198,7 +198,7 @@ class TimeSheet
       
       # Extract project from description
       project = ts_hash[:desc].scan(/(^\S+):\s.+$/).first if ts_hash[:desc]
-      ts_hash[:project] = project.first if project
+      ts_hash[:project] = project.first.downcase.delete('-') if project
 
       ts_table << ts_hash
     end
@@ -242,10 +242,10 @@ class TimeSheet
       bad_lines.push([cur_line[:number], "Bad day: #{day}"]) if day < 1 || day > 31
 
       stime = cur_line[:stime]
-      bad_lines.push([cur_line[:number], "Bad start time: #{stime}"]) if stime !~ /^([01]\d|2[0-4]):[0-5]\d$/
+      bad_lines.push([cur_line[:number], "Bad start time: #{stime}"]) if stime !~ /^([1-9]|[01]\d|2[0-4]):[0-5]\d$/
 
       etime = cur_line[:etime]
-      bad_lines.push([cur_line[:number], "Bad end time: #{etime}"]) if etime !~ /^([01]\d|2[0-4]):[0-5]\d$/
+      bad_lines.push([cur_line[:number], "Bad end time: #{etime}"]) if etime !~ /^([1-9]|[01]\d|2[0-4]):[0-5]\d$/
 
       # Check ticket name format
       rt = cur_line[:rt]
