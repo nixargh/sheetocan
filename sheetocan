@@ -3,7 +3,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '2.0.1'
+VERSION = '2.0.2'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
