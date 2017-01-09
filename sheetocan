@@ -42,6 +42,10 @@ class Options
         options[:month] = month
       end
 
+      params.on("-y", "--year N", Integer, "take month fron year N") do |year|
+        options[:year] = year
+      end
+
       params.on("-r", "--report", "show time spent during this day, week and month") do
         options[:report] = true
       end
@@ -64,6 +68,10 @@ class Options
         options[:bubbles] = bubble_limit
       end
 
+      params.on("-s", "--salary N", Integer, "add salary calculations") do |salary|
+        options[:salary] = salary
+      end
+
       params.on("-w", "--wmaker", "display output in five lines for Window Maker dock app") do
         options[:wmaker] = true
       end
@@ -74,7 +82,7 @@ class Options
 end
 
 class TimeSheet
-  attr_accessor :trunk_to, :month
+  attr_accessor :trunk_to, :month, :year
 
   def initialize(ts_file)
     @ts_file = ts_file
@@ -82,7 +90,6 @@ class TimeSheet
     @trunk_to = 1000
     t = Time.now
     _, _, _, @day, @month, @year, @wday = t.to_a
-    @month if month
   end
 
   # Create report of time spent at this day, week and month
@@ -157,7 +164,7 @@ class TimeSheet
 
   # Read timesheet and convert it to an array of hashes
   #
-  def read
+  def read(year=[@year])
     ts = IO.read(@ts_file)
     ts = ts.split("\n")
     line_number = 0
@@ -168,7 +175,7 @@ class TimeSheet
       line_number = line_number + 1
 
       # Skip empty lines and comments
-      if line.empty? || line.index("Revision") || line.index("#") == 0
+      if line.strip.empty? || line.index("Revision") || line.index("#") == 0
         next(ts_table)
       end
 
@@ -195,6 +202,9 @@ class TimeSheet
       ts_hash[:desc] = ts_hash[:desc].delete("\"")
       ts_hash[:year], ts_hash[:month], ts_hash[:day] = ts_hash[:date].split("-")
       ts_hash[:year], ts_hash[:month], ts_hash[:day] = ts_hash[:year].to_i, ts_hash[:month].to_i, ts_hash[:day].to_i
+
+      # Skip line if it doesn't match year (one of them)
+      next(ts_table) if ! year.include? ts_hash[:year]
       
       # Extract project from description
       project = ts_hash[:desc].scan(/(^\S+):\s.+$/).first if ts_hash[:desc]
@@ -383,7 +393,7 @@ class TimeSheet
     items = Hash.new
 
     @list.each do |line| 
-      if line[:month] == @month
+      if line[:year] == @year && line[:month] == @month
         item = line[item_symbol]
         if item
           time = items[item] ? items[item] : 0
@@ -425,6 +435,7 @@ ts = TimeSheet.new(ARGV[-1])
 
 ts.trunk_to = options[:trunk_to] if options[:trunk_to]
 ts.month = options[:month] if options[:month]
+ts.year = options[:year] if options[:year]
 
 reported = false
 
@@ -435,7 +446,14 @@ if options[:report]
   day_spent, week_spent, month_spent = ts.report
 
   if (hours_to_work = ts.workhours_month)
-    work_hours_info = "#{hours_to_work}, #{(month_spent / 60) - hours_to_work}"
+    # Calculate salary for current hours spent
+    if options[:salary]
+      salary = ", ₽:#{options[:salary] / hours_to_work * month_spent / 60}"
+    else
+      salary = ''
+    end
+
+    work_hours_info = "#{hours_to_work}, #{(month_spent / 60) - hours_to_work}#{salary}"
   else
     work_hours_info = ''
   end
