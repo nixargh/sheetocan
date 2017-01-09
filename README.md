@@ -20,5 +20,5 @@ sudo ln -s ~/sheetocan/sheetocan /usr/local/bin/sheetocan
 sheetocan -r ~/timesheet/myname
 ```
 ## Found bug or want a new feature?
-Please create new issue here and describe what you want.
-Also feel free to contact me by mail or jabber.
+Please create new issue here and describe what do you want.
+Also feel free to contact me by mail or Slack.
