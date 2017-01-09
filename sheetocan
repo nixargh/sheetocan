@@ -3,7 +3,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '2.1.0'
+VERSION = '2.1.1'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -21,6 +21,7 @@ VERSION = '2.1.0'
 #along with this program.  If not, see http://www.gnu.org/licenses/gpl.html.
 #### REQUIRE ###################################################################
 require 'optparse'
+require 'yaml'
 #### CLASES ####################################################################
 class Options
 
@@ -86,8 +87,8 @@ class TimeSheet
 
   def initialize(ts_file)
     @ts_file = ts_file
-    @calendar_file = ['/usr/share/sheetocan/calendar', "#{SCRIPT_DIR}/calendar"]
-    @trunk_to = 1000
+    @calendar_file = ['/usr/share/sheetocan/calendar.yaml', "#{SCRIPT_DIR}/calendar.yaml"]
+    @trunk_to = 10000
     t = Time.now
     _, _, _, @day, @month, @year, @wday = t.to_a
   end
@@ -127,11 +128,16 @@ class TimeSheet
     calculate_bubbles(limit)
   end
 
-  # Show number of workhours at month (default is current month)
+  # Show number of workhours at month of the year 
+  # (default is current month && year)
   #
-  def workhours_month(month=@month)
+  def workhours_month(month=@month, year=@year)
     calendar = read_calendar
-    calendar ? calendar[month] : nil
+    if calendar && calendar.has_key?(year) && calendar[year].has_key?(month)
+      calendar[year][month]
+    else
+      return nil
+    end
   end
 
   private
@@ -141,12 +147,7 @@ class TimeSheet
   def read_calendar
     calendar_file = find_calendar
     if calendar_file
-      calendar = Hash.new
-      IO.read(calendar_file).each_line do |line|
-        month, work_days = line.split(':')
-        calendar[month.to_i] = work_days.to_i
-      end
-      calendar
+      calendar = YAML.load_file(calendar_file)
     else
       nil
     end
