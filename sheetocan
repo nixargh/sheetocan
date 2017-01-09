@@ -138,13 +138,15 @@ class TimeSheet
 
   # Read working hours calendar
   #
-  def read_calendar
+  def read_calendar(year=@year)
     calendar_file = find_calendar
     if calendar_file
       calendar = Hash.new
       IO.read(calendar_file).each_line do |line|
-        month, work_days = line.split(':')
-        calendar[month.to_i] = work_days.to_i
+        y, month, work_days = line.split(':')
+        if year == y.to_i
+            calendar[month.to_i] = work_days.to_i
+        end
       end
       calendar
     else
@@ -434,6 +436,7 @@ options = opt.parse
 ts = TimeSheet.new(ARGV[-1])
 
 ts.trunk_to = options[:trunk_to] if options[:trunk_to]
+ts.year = ts.year - 1 if options[:month] and options[:month] > ts.month
 ts.month = options[:month] if options[:month]
 ts.year = options[:year] if options[:year]
 
