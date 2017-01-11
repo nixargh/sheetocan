@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '2.1.2'
+VERSION = '2.1.3'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -450,7 +450,7 @@ if options[:report]
   if (hours_to_work = ts.workhours_month)
     # Calculate salary for current hours spent
     if options[:salary]
-      salary = ", ₽:#{options[:salary] / hours_to_work * month_spent / 60}"
+      salary = ", S:#{options[:salary] * month_spent / hours_to_work / 60}"
     else
       salary = ''
     end
