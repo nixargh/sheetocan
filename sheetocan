@@ -1,9 +1,10 @@
 #!/usr/bin/env ruby
+# encoding: utf-8
 ###############################################################################
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '2.1.1'
+VERSION = '2.1.2'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
