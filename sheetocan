@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '2.3.0'
+VERSION = '2.3.1'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -185,7 +185,13 @@ class TimeSheet
       ts_hash[:number] = line_number
 
       splitted_line = line.split(",", 6)
+      if splitted_line.length < 5
+        bad_lines.push("Line is too short #{line_number}:\n\t#{line}")
+        next(ts_table)
+      end
+
       ts_hash[:date], ts_hash[:stime], ts_hash[:etime] = splitted_line[0..2]
+
       # Support Jira tickets format
       if splitted_line[3] =~ /^[A-Z_]+-\d+$/
         ts_hash[:tracker] = 'jira'
