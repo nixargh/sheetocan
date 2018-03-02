@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '2.2.1'
+VERSION = '2.3.1'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -183,7 +183,26 @@ class TimeSheet
 
       ts_hash = Hash.new
       ts_hash[:number] = line_number
-      ts_hash[:date], ts_hash[:stime], ts_hash[:etime], ts_hash[:queue], ts_hash[:rt], ts_hash[:desc] = line.split(",")
+
+      splitted_line = line.split(",", 6)
+      if splitted_line.length < 5
+        bad_lines.push("Line is too short #{line_number}:\n\t#{line}")
+        next(ts_table)
+      end
+
+      ts_hash[:date], ts_hash[:stime], ts_hash[:etime] = splitted_line[0..2]
+
+      # Support Jira tickets format
+      if splitted_line[3] =~ /^[A-Z_]+-\d+$/
+        ts_hash[:tracker] = 'jira'
+        ts_hash[:queue], ts_hash[:ticket] = splitted_line[3].split('-', 2)
+        ts_hash[:desc] = splitted_line[4]
+      else
+        ts_hash[:tracker] = 'rt'
+        ts_hash[:queue] = splitted_line[3]
+        ts_hash[:ticket] = splitted_line[4].delete('RT:')
+        ts_hash[:desc] = splitted_line[5]
+      end
 
       # Detect lines with bad separator and make a list
       ts_hash.each_value do |value| 
@@ -199,7 +218,7 @@ class TimeSheet
       ts_hash[:etime] = "24:00" if ts_hash[:etime] == "00:00"
       
       # Go to next line if something except description is empty
-      next (ts_table) if ts_hash[:date].empty? || ts_hash[:stime].empty? || ts_hash[:etime].empty? || ts_hash[:queue].empty? || ts_hash[:rt].empty?
+      next (ts_table) if ts_hash[:date].empty? || ts_hash[:stime].empty? || ts_hash[:etime].empty? || ts_hash[:queue].empty? || ts_hash[:ticket].empty?
       
       ts_hash[:desc] = ts_hash[:desc].delete("\"")
       ts_hash[:year], ts_hash[:month], ts_hash[:day] = ts_hash[:date].split("-")
@@ -260,8 +279,8 @@ class TimeSheet
       bad_lines.push([cur_line[:number], "Bad end time: #{etime}"]) if etime !~ /^([1-9]|[01]\d|2[0-4]):[0-5]\d$/
 
       # Check ticket name format
-      rt = cur_line[:rt]
-      bad_lines.push([cur_line[:number], "Bad ticket number: #{rt}"]) if rt !~ /^RT\:\d+$/
+      ticket = cur_line[:ticket]
+      bad_lines.push([cur_line[:number], "Bad ticket number: #{ticket}"]) if ticket !~ /^\d+$/
 
       # Record lines where end time more or equal to start time
       bad_lines.push([cur_line[:number], "Start time >= than end time"]) if to_m(cur_line[:etime]) <= to_m(cur_line[:stime])
@@ -371,7 +390,7 @@ class TimeSheet
   # Create sorted array with monthly tickets and time spent on them
   #
   def time_to_tickets
-    time_to('rt')
+    time_to('ticket')
   end
 
   # Create sorted array with monthly queues and time spent on them
