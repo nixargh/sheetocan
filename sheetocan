@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '2.3.1'
+VERSION = '2.4.0'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -34,50 +34,58 @@ class Options
     OptionParser.new do |params|
       params.banner = "Sheetocan v.#{VERSION}.\nUsage: #{__FILE__} [options]"
       
-      params.on_tail("-h", "--help", "show this message") do
+      params.on_tail('-h', '--help', 'show this message') do
         options[:help] = true
         puts params
         exit 0
       end
 
-      params.on("-m", "--month N", Integer, "show time spent at month with number N") do |month|
+      params.on('-m', '--month N', Integer, 'show time spent at month with number N') do |month|
         options[:month] = month
       end
 
-      params.on("-y", "--year N", Integer, "take month fron year N") do |year|
+      params.on('-y', '--year N', Integer, 'take month fron year N') do |year|
         options[:year] = year
       end
 
-      params.on("-r", "--report", "show time spent during this day, week and month") do
+      params.on('-r', '--report', 'show time spent during this day, week and month') do
         options[:report] = true
       end
 
-      params.on("-l", "--teamlead [p|q|t]", String, "show detailed report, time spent on [projects|queues|tickets]") do |items|
+      params.on('-l', '--teamlead [p|q|t]', String, 'show detailed report, time spent on [projects|queues|tickets]') do |items|
         items_a = Array.new 
         items.each_char { |i| items_a.push(i) }
         options[:teamlead] = items_a
       end
 
-      params.on("-T", "--top N", Integer, "show only top N records at detailed (teamlead) report; 0 stands for no limit") do |tl_limit|
+      params.on('-T', '--top N', Integer, 'show only top N records at detailed (teamlead) report; 0 stands for no limit') do |tl_limit|
         options[:teamlead_limit] = tl_limit
       end
 
-      params.on("-t", "--truncate N", Integer, "do calculations with only last number of lines") do |l_num|
+      params.on('-t', '--truncate N', Integer, 'do calculations with only last number of lines') do |l_num|
         options[:trunk_to] = l_num
       end
 
-      params.on("-b", "--bubbles F", Float, "show non-working time in current day between first and last time worked", "count only intervals < F") do |bubble_limit|
+      params.on('-b', '--bubbles F', Float, 'show non-working time in current day between first and last time worked', 'count only intervals < F') do |bubble_limit|
         options[:bubbles] = bubble_limit
       end
 
-      params.on("-s", "--salary N", Integer, "add salary calculations") do |salary|
+      params.on('-s', '--salary N', Integer, 'add salary calculations') do |salary|
         options[:salary] = salary
       end
 
-      params.on("-w", "--wmaker", "display output in five lines for Window Maker dock app") do
+      params.on('-v', '--vacation N', Integer, 'adjust working hours due to N days of vacation') do |vacation|
+        options[:vacation] = vacation
+      end
+
+      params.on('-w', '--wmaker', 'display output in five lines for Window Maker dock app') do
         options[:wmaker] = true
       end
     end.parse!
+
+    if ! options[:vacation]
+      options[:vacation] = 0
+    end
 
     options
   end
@@ -139,6 +147,16 @@ class TimeSheet
     else
       return nil
     end
+  end
+
+  # Return number of hours to reduce working hours
+  #
+  def consider_vacation(days)
+    hours = 0
+    if days > 3
+      hours = 6 * days
+    end
+    return hours
   end
 
   private
@@ -466,7 +484,7 @@ if options[:report]
 
   day_spent, week_spent, month_spent = ts.report
 
-  if (hours_to_work = ts.workhours_month)
+  if (hours_to_work = ts.workhours_month - ts.consider_vacation(options[:vacation]))
     # Calculate salary for current hours spent
     if options[:salary]
       salary = ", S:#{options[:salary] * month_spent / hours_to_work / 60}"
