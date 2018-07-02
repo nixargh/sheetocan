@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '2.4.0'
+VERSION = '2.4.1'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -213,7 +213,8 @@ class TimeSheet
       # Support Jira tickets format
       if splitted_line[3] =~ /^[A-Z_]+-\d+$/
         ts_hash[:tracker] = 'jira'
-        ts_hash[:queue], ts_hash[:ticket] = splitted_line[3].split('-', 2)
+        ts_hash[:queue] = splitted_line[3].split('-', 2)[0]
+        ts_hash[:ticket] = splitted_line[3]
         ts_hash[:desc] = splitted_line[4]
       else
         ts_hash[:tracker] = 'rt'
@@ -298,7 +299,7 @@ class TimeSheet
 
       # Check ticket name format
       ticket = cur_line[:ticket]
-      bad_lines.push([cur_line[:number], "Bad ticket number: #{ticket}"]) if ticket !~ /^\d+$/
+      bad_lines.push([cur_line[:number], "Bad ticket number: #{ticket}"]) if ticket !~ /^(\S+-|)\d+$/
 
       # Record lines where end time more or equal to start time
       bad_lines.push([cur_line[:number], "Start time >= than end time"]) if to_m(cur_line[:etime]) <= to_m(cur_line[:stime])
