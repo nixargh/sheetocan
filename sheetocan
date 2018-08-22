@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '2.4.1'
+VERSION = '2.4.2'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -211,7 +211,7 @@ class TimeSheet
       ts_hash[:date], ts_hash[:stime], ts_hash[:etime] = splitted_line[0..2]
 
       # Support Jira tickets format
-      if splitted_line[3] =~ /^[A-Z_]+-\d+$/
+      if splitted_line[3] =~ /^[0-9A-Z_]+-\d+$/
         ts_hash[:tracker] = 'jira'
         ts_hash[:queue] = splitted_line[3].split('-', 2)[0]
         ts_hash[:ticket] = splitted_line[3]
