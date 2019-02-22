@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@gmail.com>
-VERSION = '2.5.0'
+VERSION = '3.0.0'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@gmail.com>
 #
@@ -23,6 +23,16 @@ VERSION = '2.5.0'
 #### REQUIRE ###################################################################
 require 'optparse'
 require 'yaml'
+require 'net/http'
+require 'io/console'
+require 'json'
+#### FUNCTIONS #################################################################
+def ask_password()
+  print "Please enter LDAP password: "
+  password = STDIN.noecho(&:gets).chomp 
+  puts
+  password
+end
 #### CLASES ####################################################################
 class Options
 
@@ -58,6 +68,14 @@ class Options
         options[:teamlead] = items_a
       end
 
+      params.on('-g', '--get', 'get timesheet from Jira') do
+        options[:get] = true
+      end
+
+      params.on('-p', '--put', 'put timesheet into Jira') do
+        options[:put] = true
+      end
+
       params.on('-T', '--top N', Integer, 'show only top N records at detailed (teamlead) report; 0 stands for no limit') do |tl_limit|
         options[:teamlead_limit] = tl_limit
       end
@@ -81,13 +99,126 @@ class Options
       params.on('-w', '--wmaker', 'display output in five lines for Window Maker dock app') do
         options[:wmaker] = true
       end
+
+      params.on('-V', '--version', 'display version') do
+        options[:version] = true
+        puts VERSION
+        exit 0
+      end
+
+      params.on('-B', '--bless', 'some blessing') do
+        options[:bless] = true
+        puts "Holy Pinguin bless IT!"
+      end
     end.parse!
+
+    # Exit if bless is that all you want
+    exit 0 if ARGV.length == 2 and options.length == 1 and options.has_key? :bless
 
     if ! options[:vacation]
       options[:vacation] = 0
     end
 
     options
+  end
+end
+
+class Jira
+  attr_accessor :login, :password
+
+  def initialize(ts_file)
+    @ts_file = ts_file
+    @uri = URI('https://jira.iponweb.net/rest/timesheet/1.0/api')
+    @login = ENV.include?('SHEETOCAN_LOGIN') ? ENV.fetch('SHEETOCAN_LOGIN') : File.basename(ts_file)
+    @password = ENV.fetch('SHEETOCAN_PASSWORD') if ENV.include?('SHEETOCAN_PASSWORD')
+  end
+
+  def get()
+    puts "Getting timesheet from Jira."
+    puts "Using login: #{@login}."
+    @password = ask_password if ! @password
+
+    Net::HTTP.start(@uri.host, @uri.port, :use_ssl => true) do |http|
+      request = Net::HTTP::Get.new @uri
+      request.basic_auth @login, @password
+      request['accept'] = 'text/plain'
+      
+      print "Request - "
+      http.request request do |response|
+        if response.code.to_i == 200
+          puts 'OK'
+          puts "Downloading..."
+          print '|'
+          open @ts_file, 'w' do |io|
+            response.read_body do |chunk|
+              io.write chunk
+              print '>'
+            end
+            puts ' DONE'
+          end
+        else
+          puts 'FAILED'
+          puts "HTTP code: #{response.code}."
+          puts "HTTP message: #{response.message}."
+          exit 2
+        end
+      end
+    end
+    puts "Got timesheet at '#{@ts_file}'."
+  end
+
+  def put()
+    puts "Putting timesheet to Jira."
+    puts "Using login: #{@login}."
+    @password = ask_password if ! @password
+
+    Net::HTTP.start(@uri.host, @uri.port, :use_ssl => true) do |http|
+      request = Net::HTTP::Post.new(@uri)
+      request.basic_auth @login, @password
+
+      # Add file content
+      form_data = [['file', File.read(@ts_file), {filename: @ts_file}]] 
+      request.set_form form_data, 'multipart/form-data'
+      
+      print "Uploading - "
+      response = http.request request
+      if response.code.to_i == 200
+        puts 'OK'
+      else
+        puts 'FAILED'
+        puts "HTTP code: #{response.code}."
+        puts "HTTP message: #{response.message}."
+        begin
+          response_json = JSON.parse(response.body)
+          if response_json.has_key? "errors"
+            errors = response_json["errors"]
+            puts "Errors have been found (#{errors.length}): "
+            errors.each do |error|
+              puts "\t#{error["rowNumber"]}: #{error["message"]} (#{error["row"]})"
+            end
+          end
+        rescue JSON::ParserError
+          puts "HTTP body: #{response.body}."
+        end
+      end
+
+    end
+  end
+end
+
+class Keyring
+  attr_accessor :password
+
+  def initialize()
+    @keyring = nil
+    @login = nil
+    @password = nil
+  end
+
+  def get()
+  end
+
+  def put()
   end
 end
 
@@ -185,7 +316,15 @@ class TimeSheet
   # Read timesheet and convert it to an array of hashes
   #
   def read(year=[@year])
-    ts = IO.read(@ts_file)
+
+    # Exit if can't find timesheet
+    begin
+      ts = IO.read(@ts_file)
+    rescue Errno::ENOENT => error
+      puts "ERROR: #{error.message}."
+      exit 1
+    end
+
     ts = ts.split("\n")
     line_number = 0
     bad_lines = Array.new
@@ -471,13 +610,19 @@ opt = Options.new
 options = opt.parse
 
 # Take last unparsed argument as timesheet file
-ts = TimeSheet.new(ARGV[-1])
+ts_file = ARGV[-1]
+
+ts = TimeSheet.new(ts_file)
+jira = Jira.new(ts_file)
 
 ts.trunk_to = options[:trunk_to] if options[:trunk_to]
 ts.month = options[:month] if options[:month]
 ts.year = options[:year] if options[:year]
 
 reported = false
+
+# Get if requested
+jira.get if options[:get]
 
 # Display simple statistics
 if options[:report]
@@ -524,7 +669,7 @@ if options[:teamlead]
     limit = (tickets.length - 1) if options[:teamlead_limit] == 0
     puts "Hours spent on tickets (top #{limit}):"
     tickets[0..limit - 1].each do |ticket|
-      puts sprintf("%-15s %7.2f", ticket[0], (ticket[1]/60.0).round(2))
+      puts sprintf("%-20s %7.2f", ticket[0], (ticket[1]/60.0).round(2))
     end
     options[:teamlead].delete('t')
   end
@@ -533,7 +678,7 @@ if options[:teamlead]
     limit = (queues.length - 1) if options[:teamlead_limit] == 0
     puts "\nHours spent on queues (top #{limit}):"
     queues[0..limit - 1].each do |queue|
-      puts sprintf("%-15s %7.2f", queue[0], (queue[1]/60.0).round(2))
+      puts sprintf("%-20s %7.2f", queue[0], (queue[1]/60.0).round(2))
     end
     options[:teamlead].delete('q')
   end
@@ -542,7 +687,7 @@ if options[:teamlead]
     limit = (projects.length - 1) if options[:teamlead_limit] == 0
     puts "\nHours spent on projects (top #{limit}):"
     projects[0..limit - 1].each do |project|
-      puts sprintf("%-15s %7.2f", project[0], (project[1]/60.0).round(2))
+      puts sprintf("%-20s %7.2f", project[0], (project[1]/60.0).round(2))
     end
     options[:teamlead].delete('p')
   end
@@ -560,5 +705,8 @@ if ! reported
   ts.validate
   puts "No errors found."
 end
+
+# Get if requested
+jira.put if options[:put]
 
 exit 0

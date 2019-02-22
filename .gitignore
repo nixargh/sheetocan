@@ -1,2 +1,4 @@
 *.swp
 timesheet*
+test_data/*
+vendor/*
