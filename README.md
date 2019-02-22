@@ -23,13 +23,13 @@ sudo ln -s ~/sheetocan/sheetocan /usr/local/bin/sheetocan
 #### Login
 By default Sheetocan takes login from timesheet file name but if it doesn't suit you can export
 ```
-SHEETOCAN_LOGIN="<LDAP login>"
+export SHEETOCAN_LOGIN="<LDAP login>"
 ```
 
 #### Password
 You can export your password
 ```
-SHEETOCAN_PASSWORD="<LDAP password>"
+export SHEETOCAN_PASSWORD="<LDAP password>"
 ```
 or you'll be asked about it interactevely.
 
