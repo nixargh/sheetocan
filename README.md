@@ -57,6 +57,11 @@ sheetocan -l pqt ~/timesheet/myname
 sheetocan -p ~/timesheet/myname
 ```
 
+## Plans
+* Add trasformation to *old school* format (with quotes and blank lines).
+* Support keyring applications (Linux, Mac).
+* Maybe some .sheetocanrc file for those who don't mind keep they secrets openly.
+
 ## Found bug or want a new feature?
 Please create new issue here and describe what do you want.
 Also feel free to contact me by mail or Slack.
