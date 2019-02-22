@@ -2,3 +2,4 @@
 timesheet*
 test_data/*
 vendor/*
+.bundle/*

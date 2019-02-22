@@ -1,0 +1,15 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    io-console (0.4.7)
+    json (2.2.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  io-console
+  json
+
+BUNDLED WITH
+   2.0.1

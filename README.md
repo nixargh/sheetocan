@@ -15,6 +15,7 @@ sudo apt-get install sheetocan
 ```
 Using git:
 git clone https://github.com/nixargh/sheetocan.git
+bundle install
 sudo ln -s ~/sheetocan/sheetocan /usr/local/bin/sheetocan
 ```
 
@@ -58,7 +59,7 @@ sheetocan -p ~/timesheet/myname
 ```
 
 ## Plans
-* Add trasformation to *old school* format (with quotes and blank lines).
+* Add transformation to *old school* format (with quotes and blank lines).
 * Support keyring applications (Linux, Mac).
 * Maybe some .sheetocanrc file for those who don't mind keep they secrets openly.
 
