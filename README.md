@@ -42,6 +42,10 @@ I'm going to add it one day but isn't ready yet.
 ```
 sheetocan -g ~/timesheet/myname
 ```
+Want it *oldschool*? Just add **-o**.
+```
+sheetocan -g ~/timesheet/myname -o
+```
 
 ### See how much you have already spent at work
 ```
@@ -59,7 +63,7 @@ sheetocan -p ~/timesheet/myname
 ```
 
 ## Plans
-* Add transformation to *old school* format (with quotes and blank lines).
+* **Done** ~~Add transformation to *old school* format (with quotes and blank lines).~~
 * Support keyring applications (Linux, Mac).
 * Maybe some .sheetocanrc file for those who don't mind keep they secrets openly.
 

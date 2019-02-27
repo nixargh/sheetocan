@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@protonmail.com>
-VERSION = '3.0.1'
+VERSION = '3.1.0'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@protonmail.com>
 #
@@ -76,6 +76,10 @@ class Options
         options[:put] = true
       end
 
+      params.on('-o', '--oldschool', 'convert to/from oldschool format') do
+        options[:oldschool] = true
+      end
+
       params.on('-T', '--top N', Integer, 'show only top N records at detailed (teamlead) report; 0 stands for no limit') do |tl_limit|
         options[:teamlead_limit] = tl_limit
       end
@@ -126,11 +130,32 @@ end
 class Jira
   attr_accessor :login, :password
 
-  def initialize(ts_file)
+  def initialize(ts_file, oldschool)
     @ts_file = ts_file
+    @oldschool = oldschool
     @uri = URI('https://jira.iponweb.net/rest/timesheet/1.0/api')
     @login = ENV.include?('SHEETOCAN_LOGIN') ? ENV.fetch('SHEETOCAN_LOGIN') : File.basename(ts_file)
     @password = ENV.fetch('SHEETOCAN_PASSWORD') if ENV.include?('SHEETOCAN_PASSWORD')
+  end
+
+  def oldschool!()
+    puts "Converting timesheet to old school format."
+    ts = TimeSheet.new(@ts_file)
+    ts.read(years=[])
+
+    last_date = ""
+    File.open(@ts_file, 'w') do |file|
+      ts.list.reverse.each do |record|
+        # Add blank line if date changed
+        file.write("\n") if record[:date] != last_date
+        # Save date
+        last_date = record[:date]
+        # Compile line
+        line = "#{record[:date]},#{record[:stime]},#{record[:etime]},#{record[:ticket]},\"#{record[:desc]}\""
+        # Write line finally
+        file.write("#{line}\n")
+      end
+    end
   end
 
   def get()
@@ -164,6 +189,9 @@ class Jira
         end
       end
     end
+
+    oldschool! if @oldschool
+
     puts "Got timesheet at '#{@ts_file}'."
   end
 
@@ -190,9 +218,12 @@ class Jira
         puts "HTTP message: #{response.message}."
         begin
           response_json = JSON.parse(response.body)
+          if response_json.has_key? "errorMessage"
+            puts "Error: #{response_json["errorMessage"]}."
+          end
           if response_json.has_key? "errors"
             errors = response_json["errors"]
-            puts "Errors have been found (#{errors.length}): "
+            puts "Validation errors have been found (#{errors.length}): "
             errors.each do |error|
               puts "\t#{error["rowNumber"]}: #{error["message"]} (#{error["row"]})"
             end
@@ -223,7 +254,7 @@ class Keyring
 end
 
 class TimeSheet
-  attr_accessor :trunk_to, :month, :year
+  attr_accessor :trunk_to, :month, :year, :list
 
   def initialize(ts_file)
     @ts_file = ts_file
@@ -273,7 +304,7 @@ class TimeSheet
   #
   def workhours_month(month=@month, year=@year)
     calendar = read_calendar
-    if calendar && calendar.has_key?(year) && calendar[year].has_key?(month)
+    if calendar && calendar.chomp.has_key?(year) && calendar[year].has_key?(month)
       calendar[year][month]
     else
       return nil
@@ -290,42 +321,25 @@ class TimeSheet
     return hours
   end
 
-  private
-
-  # Read working hours calendar
-  #
-  def read_calendar
-    calendar_file = find_calendar
-    if calendar_file
-      calendar = YAML.load_file(calendar_file)
-    else
-      nil
-    end
-  end
-
-  # Find calendar file
-  #
-  def find_calendar
-    @calendar_file.each do |file|
-      return file if File.exist?(file)
-    end
-    puts "WARNING: Calendar file not found at: #{@calendar_file}."
-    nil
-  end
-
   # Read timesheet and convert it to an array of hashes
   #
-  def read(year=[@year])
+  def read(years=[@year])
+    # years - is a filter
+    # empty years means no filter
 
+    ts = Array.new
     # Exit if can't find timesheet
     begin
-      ts = IO.read(@ts_file)
+      File.open(@ts_file, 'r') do |file|
+        file.each_line do |line|
+          ts.push(line.chomp)
+        end
+      end
     rescue Errno::ENOENT => error
       puts "ERROR: #{error.message}."
       exit 1
     end
 
-    ts = ts.split("\n")
     line_number = 0
     bad_lines = Array.new
 
@@ -354,7 +368,7 @@ class TimeSheet
         ts_hash[:tracker] = 'jira'
         ts_hash[:queue] = splitted_line[3].split('-', 2)[0]
         ts_hash[:ticket] = splitted_line[3]
-        ts_hash[:desc] = splitted_line[4]
+        ts_hash[:desc] = splitted_line[4, 5].join(',')
       else
         ts_hash[:tracker] = 'rt'
         ts_hash[:queue] = splitted_line[3]
@@ -382,8 +396,8 @@ class TimeSheet
       ts_hash[:year], ts_hash[:month], ts_hash[:day] = ts_hash[:date].split("-")
       ts_hash[:year], ts_hash[:month], ts_hash[:day] = ts_hash[:year].to_i, ts_hash[:month].to_i, ts_hash[:day].to_i
 
-      # Skip line if it doesn't match year (one of them)
-      next(ts_table) if ! year.include? ts_hash[:year]
+      # Skip line if it doesn't match any of years if years isn't empty
+      next(ts_table) if ! years.empty? and ! years.include? ts_hash[:year]
       
       # Extract project from description
       project = ts_hash[:desc].scan(/(^\S+):\s.+$/).first if ts_hash[:desc]
@@ -399,6 +413,29 @@ class TimeSheet
     end
 
     @list.reverse!
+  end
+
+  private
+
+  # Read working hours calendar
+  #
+  def read_calendar
+    calendar_file = find_calendar
+    if calendar_file
+      calendar = YAML.load_file(calendar_file)
+    else
+      nil
+    end
+  end
+
+  # Find calendar file
+  #
+  def find_calendar
+    @calendar_file.each do |file|
+      return file if File.exist?(file)
+    end
+    puts "WARNING: Calendar file not found at: #{@calendar_file}."
+    nil
   end
 
   # Truncating list of timesheet lines to speed up calculating
@@ -613,7 +650,7 @@ options = opt.parse
 ts_file = ARGV[-1]
 
 ts = TimeSheet.new(ts_file)
-jira = Jira.new(ts_file)
+jira = Jira.new(ts_file, options[:oldschool])
 
 ts.trunk_to = options[:trunk_to] if options[:trunk_to]
 ts.month = options[:month] if options[:month]
