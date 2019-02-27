@@ -304,7 +304,7 @@ class TimeSheet
   #
   def workhours_month(month=@month, year=@year)
     calendar = read_calendar
-    if calendar && calendar.chomp.has_key?(year) && calendar[year].has_key?(month)
+    if calendar && calendar.has_key?(year) && calendar[year].has_key?(month)
       calendar[year][month]
     else
       return nil
