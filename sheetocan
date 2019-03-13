@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@protonmail.com>
-VERSION = '3.1.0'
+VERSION = '3.2.0'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@protonmail.com>
 #
@@ -21,16 +21,29 @@ VERSION = '3.1.0'
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see http://www.gnu.org/licenses/gpl.html.
 #### REQUIRE ###################################################################
+require 'bundler/setup'
 require 'optparse'
 require 'yaml'
 require 'net/http'
 require 'io/console'
 require 'json'
+require 'gir_ffi-gnome_keyring'
 #### FUNCTIONS #################################################################
-def ask_password()
-  print "Please enter LDAP password: "
-  password = STDIN.noecho(&:gets).chomp 
-  puts
+def find_password(login)
+  if ENV.include?('SHEETOCAN_PASSWORD')
+    password = ENV.fetch('SHEETOCAN_PASSWORD')
+  elsif
+    tk = TimeKeyring.new(login)
+    password = tk.get()
+  end
+
+  if not password
+    print "Please enter LDAP password: "
+    password = STDIN.noecho(&:gets).chomp
+    puts
+    tk.put(password)
+  end
+
   password
 end
 #### CLASES ####################################################################
@@ -114,6 +127,18 @@ class Options
         options[:bless] = true
         puts "Holy Pinguin bless IT!"
       end
+
+      params.on('-L', '--login LOGIN', String, 'LDAP login') do |login|
+        options[:login] = login
+      end
+
+      params.on('-P', '--password PASSWORD', String, 'LDAP password') do |password|
+        options[:password] = password
+      end
+
+      params.on('-f', '--footer FILE', String, 'for folks who like keeping pets in their timesheet') do |footer|
+        options[:footer] = footer
+      end
     end.parse!
 
     # Exit if bless is that all you want
@@ -128,14 +153,16 @@ class Options
 end
 
 class Jira
-  attr_accessor :login, :password
+  attr_accessor :login, :password, :footer
 
   def initialize(ts_file, oldschool)
     @ts_file = ts_file
+    @user = File.basename(ts_file)
     @oldschool = oldschool
     @uri = URI('https://jira.iponweb.net/rest/timesheet/1.0/api')
-    @login = ENV.include?('SHEETOCAN_LOGIN') ? ENV.fetch('SHEETOCAN_LOGIN') : File.basename(ts_file)
-    @password = ENV.fetch('SHEETOCAN_PASSWORD') if ENV.include?('SHEETOCAN_PASSWORD')
+    @login = ENV.include?('SHEETOCAN_LOGIN') ? ENV.fetch('SHEETOCAN_LOGIN') : @user
+    @password = nil
+    @footer = nil
   end
 
   def oldschool!()
@@ -145,6 +172,9 @@ class Jira
 
     last_date = ""
     File.open(@ts_file, 'w') do |file|
+      # To make vim highlight text inside quotes
+      file.write("#\n")
+
       ts.list.reverse.each do |record|
         # Add blank line if date changed
         file.write("\n") if record[:date] != last_date
@@ -155,16 +185,19 @@ class Jira
         # Write line finally
         file.write("#{line}\n")
       end
+
+      # Add footer if configured
+      file.write(get_footer) if @footer
     end
   end
 
   def get()
     puts "Getting timesheet from Jira."
     puts "Using login: #{@login}."
-    @password = ask_password if ! @password
+    @password = find_password(@login) if ! @password
 
     Net::HTTP.start(@uri.host, @uri.port, :use_ssl => true) do |http|
-      request = Net::HTTP::Get.new @uri
+      request = Net::HTTP::Get.new "#{@uri}/?user=#{@user}"
       request.basic_auth @login, @password
       request['accept'] = 'text/plain'
       
@@ -198,7 +231,7 @@ class Jira
   def put()
     puts "Putting timesheet to Jira."
     puts "Using login: #{@login}."
-    @password = ask_password if ! @password
+    @password = find_password(@login) if ! @password
 
     Net::HTTP.start(@uri.host, @uri.port, :use_ssl => true) do |http|
       request = Net::HTTP::Post.new(@uri)
@@ -235,21 +268,62 @@ class Jira
 
     end
   end
+
+  private
+
+  def get_footer()
+    File.read(@footer)
+  end
 end
 
-class Keyring
+class TimeKeyring
   attr_accessor :password
 
-  def initialize()
-    @keyring = nil
+  def initialize(login)
+    @service = 'sheetocan'
     @login = nil
-    @password = nil
+    attrs = GnomeKeyring::AttributeList.new
+    attrs.append_string 'service', @service
+    attrs.append_string 'username', login
+    @attrs = attrs
   end
 
   def get()
+    password = nil
+
+    print "Getting password from keyring - "
+    status, keys = GnomeKeyring.find_items_sync(
+      :generic_secret,
+      @attrs
+    )
+
+    if status == :ok
+      puts 'OK'
+      password = keys.first.secret
+    else
+      puts 'FAILED'
+    end
+
+    password
   end
 
-  def put()
+  def put(password)
+    print "Storing password to keyring - "
+
+    status, item_id = GnomeKeyring.item_create_sync(
+      nil,
+      :generic_secret,
+      "#{@service} (#{@login})",
+      @attrs,
+      password,
+      true
+    )
+
+    if status == :ok
+      puts 'OK'
+    else
+      puts 'FAILED'
+    end
   end
 end
 
@@ -651,6 +725,9 @@ ts_file = ARGV[-1]
 
 ts = TimeSheet.new(ts_file)
 jira = Jira.new(ts_file, options[:oldschool])
+jira.login = options[:login] if options[:login]
+jira.password = options[:password] if options[:password]
+jira.footer = options[:footer] if options[:footer]
 
 ts.trunk_to = options[:trunk_to] if options[:trunk_to]
 ts.month = options[:month] if options[:month]

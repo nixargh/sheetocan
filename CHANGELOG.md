@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2019-03-13
+### Added
+- Keyring support.
+- `--login` option. LDAP login.
+- `--password` option. LDAP password.
+- `--footer` option. It's path to a text file with anything you like. Its content will be added in the end of timesheet.
+
 ## [3.1.0] - 2019-02-28
 ### Added
 - Transformation on **get** to *old school* format (with quotes and blank lines).
