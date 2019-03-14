@@ -3,7 +3,7 @@
 Sheetocan is a tool to calculate time you spent at work at current day, week and month basing on your timesheet.
 
 ## Installation
-### Prerequisites
+### Requirements
 To make keyring library work you need some libraries installed.
 #### Ubuntu
 ```
