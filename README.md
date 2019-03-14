@@ -17,8 +17,8 @@ I don't know, will figure it out.
 git clone https://github.com/nixargh/sheetocan.git
 cd ./sheetocan
 sudo gem install bundler
-bundle install
-sudo ln -rs ./sheetocan /usr/local/bin/sheetocan
+sudo bundle install
+sudo ln -s "$(realpath ./sheetocan)" /usr/local/bin/sheetocan
 ```
 
 ### Ubuntu
