@@ -6,9 +6,10 @@ Sheetocan is a tool to calculate time you spent at work at current day, week and
 ### GitHub
 ```
 git clone https://github.com/nixargh/sheetocan.git
+cd ./sheetocan
 sudo gem install bundler
 bundle install --path vendor/bundle
-sudo ln -s ~/sheetocan/sheetocan /usr/local/bin/sheetocan
+sudo ln -s ./sheetocan /usr/local/bin/sheetocan
 ```
 
 ### Ubuntu
