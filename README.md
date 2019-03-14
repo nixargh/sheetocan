@@ -9,7 +9,7 @@ git clone https://github.com/nixargh/sheetocan.git
 cd ./sheetocan
 sudo gem install bundler
 bundle install --path vendor/bundle
-sudo ln -s ./sheetocan /usr/local/bin/sheetocan
+sudo ln -rs ./sheetocan /usr/local/bin/sheetocan
 ```
 
 ### Ubuntu
