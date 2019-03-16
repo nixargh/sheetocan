@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@protonmail.com>
-VERSION = '3.2.0'
+VERSION = '3.3.0'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@protonmail.com>
 #
@@ -23,6 +23,7 @@ VERSION = '3.2.0'
 #### REQUIRE ###################################################################
 require 'bundler/setup'
 require 'optparse'
+require 'fileutils'
 require 'yaml'
 require 'net/http'
 require 'io/console'
@@ -196,6 +197,9 @@ class Jira
     puts "Using login: #{@login}."
     @password = find_password(@login) if ! @password
 
+    tmp_file = "#{@ts_file}.tmp"
+    backup_file = "#{@ts_file}.bak"
+
     Net::HTTP.start(@uri.host, @uri.port, :use_ssl => true) do |http|
       request = Net::HTTP::Get.new "#{@uri}/?user=#{@user}"
       request.basic_auth @login, @password
@@ -205,9 +209,9 @@ class Jira
       http.request request do |response|
         if response.code.to_i == 200
           puts 'OK'
-          puts "Downloading..."
+          puts "Downloading into tmp file..."
           print '|'
-          open @ts_file, 'w' do |io|
+          open tmp_file, 'w' do |io|
             response.read_body do |chunk|
               io.write chunk
               print '>'
@@ -222,6 +226,11 @@ class Jira
         end
       end
     end
+
+    puts "Making backup copy."
+    FileUtils.cp @ts_file, backup_file
+    puts "Moving from tmp file."
+    FileUtils.mv tmp_file, @ts_file
 
     oldschool! if @oldschool
 
