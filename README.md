@@ -3,7 +3,8 @@
 Sheetocan is a tool to calculate time you spent at work at current day, week and month basing on your timesheet.
 
 ## Installation
-### Requirements
+### Keyring Requirements
+*You can skip this if you don't want to or can't use Gnome keyring.*
 To make keyring library work you need some libraries installed.
 #### Ubuntu
 ```
@@ -13,6 +14,7 @@ sudo apt install libgirepository1.0-dev libgnome-keyring-dev
 I don't know, will figure it out.
 
 ### GitHub
+#### Basic
 ```
 git clone https://github.com/nixargh/sheetocan.git
 cd ./sheetocan
@@ -20,15 +22,9 @@ sudo gem install bundler
 sudo bundle install
 sudo ln -s "$(realpath ./sheetocan)" /usr/local/bin/sheetocan
 ```
-
-### Ubuntu
-This way won't work right now due to `gir_ffi-gnome_keyring` gem requirement.
-
-Using [Launchpad](https://launchpad.net/~nixargh/+archive/ubuntu/sheetocan):
+#### Add Keyring
 ```
-sudo apt-add-repository ppa:nixargh/sheetocan
-sudo apt-get update
-sudo apt-get install sheetocan
+sudo bundle add gir_ffi-gnome_keyring
 ```
 
 ## Authentication
@@ -46,6 +42,7 @@ sheetocan -g ~/timesheet/mjakson -o -L jsmith
 
 #### Password
 Default is entering password interactively. After that sheetocan will try to store it into keyring.
+If you don't have Gnome keyring or Ruby library isn't functional **sheetocan** asks password interactively.
 
 Or you could export your password
 ```

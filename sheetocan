@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@protonmail.com>
-VERSION = '3.3.0'
+VERSION = '3.4.0'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@protonmail.com>
 #
@@ -28,21 +28,31 @@ require 'yaml'
 require 'net/http'
 require 'io/console'
 require 'json'
-require 'gir_ffi-gnome_keyring'
 #### FUNCTIONS #################################################################
 def find_password(login)
+  password = nil
+  tk = nil
+
   if ENV.include?('SHEETOCAN_PASSWORD')
+    # Read password from ENV
     password = ENV.fetch('SHEETOCAN_PASSWORD')
   elsif
-    tk = TimeKeyring.new(login)
-    password = tk.get()
+    # Read password from Keyring
+    begin
+      tk = TimeKeyring.new(login)
+    rescue LoadError => error
+      puts "Can't load Keyring requirements: '#{error.message}'."
+    end
+    password = tk.get() if tk
   end
 
+  # If no password found ask interactively
   if not password
     print "Please enter LDAP password: "
     password = STDIN.noecho(&:gets).chomp
     puts
-    tk.put(password)
+    # Save to Keyring if it works
+    tk.put(password) if tk
   end
 
   password
@@ -289,6 +299,8 @@ class TimeKeyring
   attr_accessor :password
 
   def initialize(login)
+    require 'gir_ffi-gnome_keyring'
+
     @service = 'sheetocan'
     @login = nil
     attrs = GnomeKeyring::AttributeList.new
