@@ -8,7 +8,7 @@ Sheetocan is a tool to calculate time you spent at work at current day, week and
 To make keyring library work you need some libraries installed.
 #### Ubuntu
 ```
-sudo apt install libgirepository1.0-dev libgnome-keyring-dev
+sudo apt install libgirepository1.0-dev libgnome-keyring-dev ruby-dev
 ```
 #### Others
 I don't know, will figure it out.

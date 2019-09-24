@@ -1,4 +1,6 @@
 *.swp
+*.swo
+Gemfile.lock
 timesheet*
 test_data/*
 vendor/*
