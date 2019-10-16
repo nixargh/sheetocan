@@ -24,7 +24,7 @@ sudo ln -s "$(realpath ./sheetocan)" /usr/local/bin/sheetocan
 ```
 #### Add Keyring
 ```
-sudo bundle install gir_ffi-gnome_keyring
+sudo gem install gir_ffi-gnome_keyring
 ```
 
 ## Authentication
