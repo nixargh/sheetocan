@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@protonmail.com>
-VERSION = '3.5.0'
+VERSION = '3.5.1'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@protonmail.com>
 #
@@ -237,8 +237,11 @@ class Jira
       end
     end
 
-    puts "Making backup copy."
-    FileUtils.cp @ts_file, backup_file
+    if File.exist?(@ts_file)
+      puts "Making backup copy."
+      FileUtils.cp @ts_file, backup_file
+    end
+
     puts "Moving from tmp file."
     FileUtils.mv tmp_file, @ts_file
 

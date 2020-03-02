@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [3.5.1] - 2020-03-02
+### Fixed
+- `sheetocan` do not try to make backup of timesheet file if it's not exists.
+
 ## [3.5.0] - 2020-01-08
 ### Added
 - `calendar.yaml` work hours for year **2020**.
