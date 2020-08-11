@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@protonmail.com>
-VERSION = '3.5.4'
+VERSION = '3.6.0'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@protonmail.com>
 #
@@ -28,6 +28,8 @@ require 'yaml'
 require 'net/http'
 require 'io/console'
 require 'json'
+#### CONSTANTS #################################################################
+VACATION_COEF = 5.714
 #### FUNCTIONS #################################################################
 def find_password(login)
   password = nil
@@ -334,7 +336,7 @@ class TimeKeyring
   def put(password)
     print "Storing password to keyring - "
 
-    status, item_id = GnomeKeyring.item_create_sync(
+    status, _ = GnomeKeyring.item_create_sync(
       nil,
       :generic_secret,
       "#{@service} (#{@login})",
@@ -414,9 +416,9 @@ class TimeSheet
   def consider_vacation(days)
     hours = 0
     if days > 3
-      hours = 6 * days
+      hours = VACATION_COEF * days
     end
-    return hours
+    return hours.round(2)
   end
 
   # Read timesheet and convert it to an array of hashes
@@ -520,7 +522,7 @@ class TimeSheet
   def read_calendar
     calendar_file = find_calendar
     if calendar_file
-      calendar = YAML.load_file(calendar_file)
+      YAML.load_file(calendar_file)
     else
       nil
     end
@@ -558,11 +560,9 @@ class TimeSheet
       bad_lines.push([cur_line[:number], "Bad year: #{year}"]) if year > year_now
 
       month = cur_line[:month]
-      month_now = Time.now.month
       bad_lines.push([cur_line[:number], "Bad month: #{month}"]) if month < 1 || month > 12
 
       day = cur_line[:day]
-      day_now = Time.now.day
       bad_lines.push([cur_line[:number], "Bad day: #{day}"]) if day < 1 || day > 31
 
       stime = cur_line[:stime]
