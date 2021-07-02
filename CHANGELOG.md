@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [3.8.0] - 2021-07-02
+### Added
+- `sheetocan` new command line argument **--ignore_badlines**. Allows to get report even after parsing errors.
+
 ## [3.7.0] - 2020-12-25
 ### Changed
 - `calendar.yaml` working hours for **2021**, adjust of December 2020.

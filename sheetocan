@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@protonmail.com>
-VERSION = '3.7.0'
+VERSION = '3.8.0'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@protonmail.com>
 #
@@ -104,6 +104,10 @@ class Options
 
       params.on('-o', '--oldschool', 'convert to/from oldschool format') do
         options[:oldschool] = true
+      end
+
+      params.on('--ignore_badlines', 'do not exit in case of bad lines') do
+        options[:ignore_badlines] = true
       end
 
       params.on('-T', '--top N', Integer, 'show only top N records at detailed (teamlead) report; 0 stands for no limit') do |tl_limit|
@@ -354,12 +358,13 @@ class TimeKeyring
 end
 
 class TimeSheet
-  attr_accessor :trunk_to, :month, :year, :list
+  attr_accessor :trunk_to, :month, :year, :list, :ignore_badlines
 
   def initialize(ts_file)
     @ts_file = ts_file
     @calendar_file = ['/usr/share/sheetocan/calendar.yaml', "#{SCRIPT_DIR}/calendar.yaml"]
     @trunk_to = 10000
+    @ignore_badlines = false
     t = Time.now
     _, _, _, @day, @month, @year, @wday = t.to_a
   end
@@ -604,7 +609,7 @@ class TimeSheet
         puts "\t#{error[0]}: #{error[1]}"
       end
 
-      return false
+      return @ignore_badlines
     end
 
     return true
@@ -754,6 +759,7 @@ jira.password = options[:password] if options[:password]
 jira.footer = options[:footer] if options[:footer]
 
 ts.trunk_to = options[:trunk_to] if options[:trunk_to]
+ts.ignore_badlines = options[:ignore_badlines] if options[:ignore_badlines]
 ts.month = options[:month] if options[:month]
 ts.year = options[:year] if options[:year]
 
