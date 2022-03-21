@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@protonmail.com>
-VERSION = '3.9.0'
+VERSION = '3.10.0'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@protonmail.com>
 #
@@ -74,6 +74,10 @@ class Options
         options[:help] = true
         puts params
         exit 0
+      end
+
+      params.on('-d', '--day N', Integer, 'show time spent for day N') do |day|
+        options[:day] = day
       end
 
       params.on('-m', '--month N', Integer, 'show time spent at month with number N') do |month|
@@ -358,7 +362,7 @@ class TimeKeyring
 end
 
 class TimeSheet
-  attr_accessor :trunk_to, :month, :year, :list, :ignore_badlines
+  attr_accessor :trunk_to, :day, :month, :year, :list, :ignore_badlines
 
   def initialize(ts_file)
     @ts_file = ts_file
@@ -674,11 +678,22 @@ class TimeSheet
   # Calculate minutes loged this month
   #
   def month_spent
-    return nil if (!@year && !@month)
+    return nil if (!@year && !@month && !@day)
+
     @list.inject(0) do |t_spent, line|
-      if line[:year] == @year && line[:month] == @month
-        minutes = to_m(line[:etime]) - to_m(line[:stime])
-        t_spent = t_spent + minutes
+      if line[:year] == @year
+        if @day <= 20
+          if (line[:month] == @month-1 && line[:day] >= 21) || (line[:month] == @month && line[:day] <= 20)
+            minutes = to_m(line[:etime]) - to_m(line[:stime])
+            t_spent = t_spent + minutes
+          end
+        else
+          if (line[:month] == @month && line[:day] >= 21) || (line[:month] == @month+1 && line[:day] <= 20)
+            minutes = to_m(line[:etime]) - to_m(line[:stime])
+            t_spent = t_spent + minutes
+          end
+        end
+        t_spent
       else
         next(t_spent)
       end
@@ -760,6 +775,7 @@ jira.footer = options[:footer] if options[:footer]
 
 ts.trunk_to = options[:trunk_to] if options[:trunk_to]
 ts.ignore_badlines = options[:ignore_badlines] if options[:ignore_badlines]
+ts.day = options[:day] if options[:day]
 ts.month = options[:month] if options[:month]
 ts.year = options[:year] if options[:year]
 
