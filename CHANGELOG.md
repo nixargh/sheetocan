@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [3.11.1] - 2023-03-20
+### Fixed
+- `calendar.yaml` for 3-rd month of 2023.
+
 ## [3.11.0] - 2023-01-09
 ### Changed
 - `calendar.yaml` working hours for the first half of year **2023**. Probably the last release ever.
