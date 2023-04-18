@@ -29,6 +29,12 @@ sudo gem install gir_ffi-gnome_keyring
 
 ## Authentication
 ### Environment variables
+#### Jira address
+No default, so you must export that
+```
+export SHEETOCAN_JIRA="<Jira server FQDN>"
+```
+
 #### Login
 By default Sheetocan takes login from timesheet file name but if it doesn't suit you can export
 ```
