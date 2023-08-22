@@ -4,7 +4,7 @@
 #### INFO ######################################################################
 # Sheetocan - tool for timesheet operations.
 # (*w) author: nixargh <nixargh@protonmail.com>
-VERSION = '3.12.0'
+VERSION = '3.13.0'
 #### LICENSE ###################################################################
 #Copyright (C) 2014  nixargh <nixargh@protonmail.com>
 #
@@ -457,7 +457,7 @@ class TimeSheet
       line_number = line_number + 1
 
       # Skip empty lines and comments
-      if line.strip.empty? || line.index("Revision") || line.index("#") == 0
+      if line.strip.empty? || line.index("Revision") || line.index("#") == 0 || line == ">>> TIRED <<<"
         next(ts_table)
       end
 
